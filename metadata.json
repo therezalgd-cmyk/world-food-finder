@@ -1,0 +1,7 @@
+{
+  "name": "Copy of World Food Finder",
+  "description": "An application to discover restaurants and food from around the world based on your location. It supports multiple languages and allows for real-time searching powered by Gemini.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}
