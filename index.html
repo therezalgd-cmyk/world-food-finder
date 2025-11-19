@@ -1,561 +1,340 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>World Food Finder</title>
+  <meta name="description" content="Responsive prototype: World Food Finder - search cuisines, filter, view on map, save favorites." />
+  <!-- Leaflet CSS (for map) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+  <style>
+    /* Mobile-first responsive CSS */
+    :root{
+      --accent:#EF6C00;
+      --muted:#6b7280;
+      --card:#ffffff;
+      --bg:#f8fafc;
+      --glass: rgba(255,255,255,0.7);
+    }
+    *{box-sizing:border-box;}
+    html,body{height:100%;margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;color:#0f172a;background:var(--bg);}
+    .app{max-width:1100px;margin:18px auto;padding:12px;}
 
-    <!-- Primary Meta Tags -->
-    <title>World Food Finder</title>
-    <meta name="title" content="World Food Finder">
-    <meta name="description" content="Discover delicious food from around the world near you. Search for restaurants with real-time, location-based recommendations.">
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;}
+    .brand{display:flex;gap:10px;align-items:center;}
+    .logo{width:44px;height:44px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#ffb86b);display:flex;align-items:center;justify-content:center;color:white;font-weight:700;}
+    h1{font-size:1.1rem;margin:0;}
+    p.lead{margin:0;color:var(--muted);font-size:.85rem;}
 
-    <!-- Open Graph / Facebook -->
-    <meta property="og:type" content="website">
-    <!-- <meta property="og:url" content="YOUR_APP_URL_HERE"> -->
-    <meta property="og:title" content="World Food Finder">
-    <meta property="og:description" content="Discover delicious food from around the world near you. Search for restaurants with real-time, location-based recommendations.">
-    <meta property="og:image" content="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1280">
+    .controls{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+    .search{flex:1;display:flex;gap:8px;}
+    .search input{flex:1;padding:10px 12px;border-radius:10px;border:1px solid #e6e9ee;background:transparent;}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 12px;border-radius:10px;border:none;background:var(--accent);color:white;font-weight:600;cursor:pointer;}
+    .btn.secondary{background:transparent;color:var(--accent);border:1px solid rgba(239,108,0,0.15);}
 
-    <!-- Twitter -->
-    <meta property="twitter:card" content="summary_large_image">
-    <!-- <meta property="twitter:url" content="YOUR_APP_URL_HERE"> -->
-    <meta property="twitter:title" content="World Food Finder">
-    <meta property="twitter:description" content="Discover delicious food from around the world near you. Search for restaurants with real-time, location-based recommendations.">
-    <meta property="twitter:image" content="https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=1280">
+    .layout{display:grid;grid-template-columns:1fr;gap:12px;margin-top:14px;}
+    @media(min-width:880px){.layout{grid-template-columns:420px 1fr;}}
 
-    <!-- Styling and Fonts -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Galada&family=Noto+Sans+Bengali:wght@400;500;700&family=Noto+Sans:wght@400;500;700&family=Noto+Sans+JP:wght@400;500;700&family=Noto+Sans+Arabic:wght@400;500;700&family=Noto+Sans+Devanagari:wght@400;500;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Noto Sans', 'Noto Sans Bengali', 'Noto Sans JP', 'Noto Sans Arabic', 'Noto Sans Devanagari', sans-serif;
-        }
-        .font-display {
-            font-family: 'Galada', cursive;
-        }
-        .loader {
-            border-top-color: #f59e0b;
-            -webkit-animation: spinner 1.5s linear infinite;
-            animation: spinner 1.5s linear infinite;
-        }
-        @-webkit-keyframes spinner {
-            0% { -webkit-transform: rotate(0deg); }
-            100% { -webkit-transform: rotate(360deg); }
-        }
-        @keyframes spinner {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .card-image {
-            aspect-ratio: 16 / 10;
-            object-fit: cover;
-        }
-    </style>
-<script type="importmap">
-{
-  "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "@google/genai": "https://esm.sh/@google/genai"
-  }
-}
-</script>
+    .panel{background:var(--card);padding:12px;border-radius:12px;box-shadow:0 6px 20px rgba(15,23,42,0.06);}
+
+    .filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;}
+    .chip{padding:8px 10px;border-radius:999px;border:1px solid #e6e9ee;background:var(--glass);font-size:.85rem;cursor:pointer;}
+    .chip.active{background:var(--accent);color:white;border:none;}
+
+    .results{display:flex;flex-direction:column;gap:10px;}
+    .card{display:flex;gap:10px;padding:10px;border-radius:10px;align-items:center;}
+    .card .thumb{width:76px;height:76px;border-radius:8px;background:#eee;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-weight:700;color:var(--muted);}
+    .card .meta{flex:1;}
+    .card h3{margin:0;font-size:.98rem;}
+    .meta p{margin:6px 0 0;color:var(--muted);font-size:.85rem;}
+    .card .actions{display:flex;gap:6px;align-items:center;}
+
+    .mapwrap{height:54vh;border-radius:12px;overflow:hidden;}
+    #map{height:100%;min-height:320px;}
+
+    .results-empty{padding:22px;text-align:center;color:var(--muted);}
+
+    /* Modal */
+    .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:none;align-items:center;justify-content:center;padding:18px;}
+    .modal{background:white;border-radius:12px;max-width:720px;width:100%;padding:16px;}
+    .modal.show{display:block;}
+
+    /* small helpers */
+    .row{display:flex;gap:8px;align-items:center;}
+    .muted{color:var(--muted);}
+    .rating{font-weight:700;color:#f59e0b;}
+
+    /* responsive tweaks */
+    @media(max-width:600px){
+      .logo{width:40px;height:40px;}
+      header{gap:8px;}
+      .mapwrap{height:38vh;}
+    }
+  </style>
 </head>
-<body class="bg-gray-900 text-white">
-    <div id="root"></div>
-    <script type="module">
-        import React, { useState, useEffect, useCallback, useRef } from 'react';
-        import ReactDOM from 'react-dom/client';
-        import { GoogleGenAI } from "@google/genai";
+<body>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo">WF</div>
+        <div>
+          <h1>World Food Finder</h1>
+          <p class="lead">Find cuisines, local dishes, and places near you — prototype</p>
+        </div>
+      </div>
+      <div class="actions">
+        <button id="toggleMapBtn" class="btn secondary">Toggle map</button>
+        <button id="favoritesBtn" class="btn">Favorites</button>
+      </div>
+    </header>
 
-        // ============== START: types.ts ==============
-        var LanguageCode;
-        (function (LanguageCode) {
-            LanguageCode["EN"] = "en";
-            LanguageCode["BN"] = "bn";
-            LanguageCode["AR"] = "ar";
-            LanguageCode["HI"] = "hi";
-            LanguageCode["JA"] = "ja";
-            LanguageCode["ES"] = "es";
-        })(LanguageCode || (LanguageCode = {}));
-        
-        // ============== END: types.ts ==============
+    <div class="controls">
+      <div class="search">
+        <input id="searchInput" type="search" placeholder="Search dishes, cuisine, city — e.g. biryani, ramen, Seoul" aria-label="Search" />
+        <button id="searchBtn" class="btn">Search</button>
+      </div>
+      <select id="sortSelect" class="chip" aria-label="Sort results">
+        <option value="relevance">Sort: Relevance</option>
+        <option value="rating">Sort: Rating</option>
+        <option value="distance">Sort: Distance</option>
+      </select>
+    </div>
 
+    <main class="layout">
+      <aside class="panel">
+        <div class="row">
+          <strong>Filters</strong>
+          <small class="muted">(tap to toggle)</small>
+        </div>
+        <div class="filters" id="filterList">
+          <!-- chips injected -->
+        </div>
 
-        // ============== START: constants.ts ==============
-        const LANGUAGES = [
-            { code: LanguageCode.EN, name: 'English' },
-            { code: LanguageCode.BN, name: 'বাংলা (Bengali)' },
-            { code: LanguageCode.AR, name: 'العربية (Arabic)' },
-            { code: LanguageCode.HI, name: 'हिन्दी (Hindi)' },
-            { code: LanguageCode.JA, name: '日本語 (Japanese)' },
-            { code: LanguageCode.ES, name: 'Español' },
-        ];
-        const TRANSLATIONS = {
-            [LanguageCode.EN]: {
-                appTitle: 'World Food Finder',
-                appSubtitle: 'Discover delicious food near you',
-                searchPlaceholder: 'e.g., "pizza" or "sushi"',
-                searchButton: 'Search',
-                useMyLocation: 'Use My Location',
-                findingLocation: 'Finding your location...',
-                locationError: 'Could not get location. Please allow access or search manually.',
-                adminPanel: 'Admin Panel',
-                uploadLogo: 'Upload a new logo',
-                close: 'Close',
-                searching: 'Searching for the best spots...',
-                noResults: 'No restaurants found. Try a different search!',
-                initialPrompt: 'Welcome! Use the search bar to find amazing food, or let us use your location for personalized recommendations.',
-                viewOnMap: 'View on Map',
-                advertisement: 'Advertisement',
-            },
-            [LanguageCode.BN]: {
-                appTitle: 'বিশ্ব খাদ্য সন্ধানকারী',
-                appSubtitle: 'আপনার কাছাকাছি সুস্বাদু খাবার আবিষ্কার করুন',
-                searchPlaceholder: 'যেমন, "পিজা" বা "সুশি"',
-                searchButton: 'অনুসন্ধান',
-                useMyLocation: 'আমার অবস্থান ব্যবহার করুন',
-                findingLocation: 'আপনার অবস্থান খোঁজা হচ্ছে...',
-                locationError: 'অবস্থান পাওয়া যায়নি। অনুগ্রহ করে অনুমতি দিন অথবা নিজে অনুসন্ধান করুন।',
-                adminPanel: 'অ্যাডমিন প্যানেল',
-                uploadLogo: 'নতুন লোগো আপলোড করুন',
-                close: 'বন্ধ করুন',
-                searching: 'সেরা জায়গা খোঁজা হচ্ছে...',
-                noResults: 'কোনো রেস্তোরাঁ পাওয়া যায়নি। অন্য কিছু চেষ্টা করুন!',
-                initialPrompt: 'স্বাগতম! আশ্চর্যজনক খাবার খুঁজে পেতে অনুসন্ধান বার ব্যবহার করুন, অথবা ব্যক্তিগতকৃত সুপারিশের জন্য আমাদের আপনার অবস্থান ব্যবহার করতে দিন।',
-                viewOnMap: 'মানচিত্রে দেখুন',
-                advertisement: 'বিজ্ঞাপন',
-            },
-            [LanguageCode.AR]: {
-                appTitle: 'مكتشف الطعام العالمي',
-                appSubtitle: 'اكتشف طعامًا لذيذًا بالقرب منك',
-                searchPlaceholder: 'مثال: "بيتزا" أو "سوشي"',
-                searchButton: 'بحث',
-                useMyLocation: 'استخدام موقعي',
-                findingLocation: 'جاري البحث عن موقعك...',
-                locationError: 'تعذر الحصول على الموقع. يرجى السماح بالوصول أو البحث يدويًا.',
-                adminPanel: 'لوحة التحكم',
-                uploadLogo: 'تحميل شعار جديد',
-                close: 'إغلاق',
-                searching: 'جاري البحث عن أفضل الأماكن...',
-                noResults: 'لم يتم العثور على مطاعم. جرب بحثًا مختلفًا!',
-                initialPrompt: 'أهلاً بك! استخدم شريط البحث للعثور على طعام رائع، أو اسمح لنا باستخدام موقعك للحصول على توصيات مخصصة.',
-                viewOnMap: 'عرض على الخريطة',
-                advertisement: 'إعلان',
-            },
-            [LanguageCode.HI]: {
-                appTitle: 'विश्व खाद्य खोजक',
-                appSubtitle: 'अपने आस-पास स्वादिष्ट भोजन की खोज करें',
-                searchPlaceholder: 'जैसे, "पिज़्ज़ा" या "सुशी"',
-                searchButton: 'खोजें',
-                useMyLocation: 'मेरा स्थान उपयोग करें',
-                findingLocation: 'आपका स्थान ढूंढा जा रहा है...',
-                locationError: 'स्थान प्राप्त नहीं हो सका। कृपया पहुँच की अनुमति दें या मैन्युअल रूप से खोजें।',
-                adminPanel: 'एडमिन पैनल',
-                uploadLogo: 'नया लोगो अपलोड करें',
-                close: 'बंद करें',
-                searching: 'सर्वोत्तम स्थानों की खोज की जा रही है...',
-                noResults: 'कोई रेस्तरां नहीं मिला। कुछ और खोजें!',
-                initialPrompt: 'स्वागत है! अद्भुत भोजन खोजने के लिए खोज बार का उपयोग करें, या व्यक्तिगत सिफारिशों के लिए हमें अपना स्थान उपयोग करने दें।',
-                viewOnMap: 'नक्शे पर देखें',
-                advertisement: 'विज्ञापन',
-            },
-            [LanguageCode.JA]: {
-                appTitle: 'ワールドフードファインダー',
-                appSubtitle: 'お近くの美味しい食べ物を発見',
-                searchPlaceholder: '例：「ピザ」または「寿司」',
-                searchButton: '検索',
-                useMyLocation: '現在地を使用',
-                findingLocation: '現在地を検索中...',
-                locationError: '位置情報を取得できませんでした。アクセスを許可するか、手動で検索してください。',
-                adminPanel: '管理者パネル',
-                uploadLogo: '新しいロゴをアップロード',
-                close: '閉じる',
-                searching: '最高のお店を検索中...',
-                noResults: 'レストランが見つかりませんでした。別の検索をお試しください！',
-                initialPrompt: 'ようこそ！検索バーを使って素晴らしい食べ物を見つけるか、現在地を使用してパーソナライズされたおすすめを取得してください。',
-                viewOnMap: '地図で見る',
-                advertisement: '広告',
-            },
-            [LanguageCode.ES]: {
-                appTitle: 'Buscador Mundial de Comida',
-                appSubtitle: 'Descubre comida deliciosa cerca de ti',
-                searchPlaceholder: 'ej., "pizza" o "sushi"',
-                searchButton: 'Buscar',
-                useMyLocation: 'Usar mi ubicación',
-                findingLocation: 'Buscando tu ubicación...',
-                locationError: 'No se pudo obtener la ubicación. Por favor, permite el acceso o busca manually.',
-                adminPanel: 'Panel de Administrador',
-                uploadLogo: 'Subir nuevo logo',
-                close: 'Cerrar',
-                searching: 'Buscando los mejores lugares...',
-                noResults: 'No se encontraron restaurantes. ¡Intenta una búsqueda diferente!',
-                initialPrompt: '¡Bienvenido! Usa la barra de búsqueda para encontrar comida increíble, o permítenos usar tu ubicación para recomendaciones personalizadas.',
-                viewOnMap: 'Ver en el mapa',
-                advertisement: 'Publicidad',
-            },
-        };
-        // ============== END: constants.ts ==============
+        <div style="margin-top:12px">
+          <strong>Results</strong>
+          <div id="results" class="results" style="margin-top:8px">
+            <!-- results injected here -->
+          </div>
+          <div id="resultsEmpty" class="results-empty" style="display:none">No results. Try different keywords or remove filters.</div>
+        </div>
+      </aside>
 
+      <section>
+        <div class="panel mapwrap" id="mapPanel">
+          <div id="map"></div>
+        </div>
+      </section>
+    </main>
+  </div>
 
-        // ============== START: components/icons.tsx ==============
-        const GlobeIcon = ({ className }) => (
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: className, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2 },
-                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m0 0a9 9 0 019-9m-9 9a9 9 0 009 9" }))
-        );
-        const SearchIcon = ({ className }) => (
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: className, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2 },
-                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" }))
-        );
-        const LocationMarkerIcon = ({ className }) => (
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: className, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2 },
-                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" }),
-                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M15 11a3 3 0 11-6 0 3 3 0 016 0z" }))
-        );
-        const CogIcon = ({ className }) => (
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: className, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2 },
-                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" }),
-                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M15 12a3 3 0 11-6 0 3 3 0 016 0z" }))
-        );
-        const XIcon = ({ className }) => (
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: className, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2 },
-                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M6 18L18 6M6 6l12 12" }))
-        );
-        const UploadIcon = ({ className }) => (
-            React.createElement("svg", { xmlns: "http://www.w3.org/2000/svg", className: className, fill: "none", viewBox: "0 0 24 24", stroke: "currentColor", strokeWidth: 2 },
-                React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", d: "M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" }))
-        );
-        // ============== END: components/icons.tsx ==============
+  <!-- Modal -->
+  <div id="modalBackdrop" class="modal-backdrop" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal" role="document">
+      <button id="closeModal" class="btn secondary" style="float:right">Close</button>
+      <h2 id="mdlTitle">Place</h2>
+      <p id="mdlDesc" class="muted"></p>
+      <div style="margin-top:8px" id="mdlExtra"></div>
+    </div>
+  </div>
 
+  <!-- Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script>
+    /* Sample dataset - in a real app you'd fetch from API */
+    const DATA = [
+      {id:1,name:'Dhaka Biryani House',cuisine:'Biryani',city:'Dhaka',rating:4.6,coords:[23.7104,90.4074],desc:'Legendary beef & chicken biryani.'},
+      {id:2,name:'Tokyo Ramen Lab',cuisine:'Ramen',city:'Tokyo',rating:4.7,coords:[35.6895,139.6917],desc:'Rich tonkotsu bowls.'},
+      {id:3,name:'Seoul Kimchi Corner',cuisine:'Korean',city:'Seoul',rating:4.4,coords:[37.5665,126.9780],desc:'Homestyle kimchi and BBQ.'},
+      {id:4,name:'Mumbai Vada Pav',cuisine:'Street',city:'Mumbai',rating:4.2,coords:[19.0760,72.8777],desc:'Crunchy vada pav & chai.'},
+      {id:5,name:'Istanbul Kebab Hub',cuisine:'Turkish',city:'Istanbul',rating:4.5,coords:[41.0082,28.9784],desc:'Doner and fresh flatbreads.'},
+      {id:6,name:'Lima Ceviche Spot',cuisine:'Peruvian',city:'Lima',rating:4.8,coords:[-12.0464,-77.0428],desc:'Zesty ceviche with aji.'}
+    ];
 
-        // ============== START: services/geminiService.ts ==============
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    // App state
+    const state = {
+      query:'',
+      filter: null, // e.g. 'Biryani'
+      sort:'relevance',
+      showMap:true,
+      favorites: new Set(JSON.parse(localStorage.getItem('wf:favs')||'[]')),
+      map:null,
+      markers: []
+    };
 
-        function parseRestaurants(markdown) {
-            const restaurants = [];
-            const lines = markdown.split('\n').map(line => line.trim()).filter(line => line);
-            let currentRestaurant = null;
+    // Elements
+    const filterList = document.getElementById('filterList');
+    const resultsEl = document.getElementById('results');
+    const resultsEmpty = document.getElementById('resultsEmpty');
+    const searchInput = document.getElementById('searchInput');
+    const searchBtn = document.getElementById('searchBtn');
+    const sortSelect = document.getElementById('sortSelect');
+    const toggleMapBtn = document.getElementById('toggleMapBtn');
+    const mapPanel = document.getElementById('mapPanel');
+    const favoritesBtn = document.getElementById('favoritesBtn');
 
-            for (const line of lines) {
-                const nameMatch = line.match(/^\d+\.\s*\**(.+?)\**$/);
-                if (nameMatch && nameMatch[1]) {
-                    if (currentRestaurant) {
-                        restaurants.push(currentRestaurant);
-                    }
-                    currentRestaurant = {
-                        name: nameMatch[1].trim(),
-                        description: '',
-                        imagePrompt: ''
-                    };
-                } else if (currentRestaurant) {
-                    if (line.toLowerCase().startsWith('description:')) {
-                        currentRestaurant.description = line.substring('description:'.length).trim();
-                    } else if (line.toLowerCase().startsWith('imageprompt:')) {
-                        currentRestaurant.imagePrompt = line.substring('imageprompt:'.length).trim();
-                    }
-                }
-            }
+    // Modal
+    const modalBackdrop = document.getElementById('modalBackdrop');
+    const closeModal = document.getElementById('closeModal');
+    const mdlTitle = document.getElementById('mdlTitle');
+    const mdlDesc = document.getElementById('mdlDesc');
+    const mdlExtra = document.getElementById('mdlExtra');
 
-            if (currentRestaurant) {
-                restaurants.push(currentRestaurant);
-            }
-            return restaurants;
+    function uniqueCuisines(data){
+      const s=new Set(); data.forEach(d=>s.add(d.cuisine)); return Array.from(s);
+    }
+
+    function renderFilters(){
+      const cuisines = uniqueCuisines(DATA);
+      filterList.innerHTML='';
+      cuisines.forEach(c=>{
+        const btn = document.createElement('button');
+        btn.className='chip'+(state.filter===c? ' active':'');
+        btn.textContent=c;
+        btn.addEventListener('click',()=>{state.filter = state.filter===c? null : c; render();});
+        filterList.appendChild(btn);
+      });
+    }
+
+    function distanceApprox(a,b){
+      // crude distance (Haversine would be better). Used only when sorting by distance but without user location, fallback to 0.
+      if(!a||!b) return 0; const toR = Math.PI/180; const [lat1,lon1]=a; const [lat2,lon2]=b; const R=6371; const dLat=(lat2-lat1)*toR; const dLon=(lon2-lon1)*toR; const A=Math.sin(dLat/2)**2 + Math.cos(lat1*toR)*Math.cos(lat2*toR)*Math.sin(dLon/2)**2; const C=2*Math.atan2(Math.sqrt(A),Math.sqrt(1-A)); return R*C;
+    }
+
+    function renderResults(){
+      let list = DATA.slice();
+      // filter by query
+      const q = state.query.trim().toLowerCase();
+      if(q){
+        list = list.filter(d=> (d.name+ ' ' + d.cuisine + ' ' + d.city + ' ' + d.desc).toLowerCase().includes(q));
+      }
+      if(state.filter) list = list.filter(d=>d.cuisine===state.filter);
+
+      // sort
+      if(state.sort==='rating') list.sort((a,b)=>b.rating-a.rating);
+      else if(state.sort==='distance'){
+        // If navigator geolocation available, sort by real distance. otherwise maintain order.
+        if(state.userCoords){
+          list.sort((a,b)=>distanceApprox(a.coords,state.userCoords)-distanceApprox(b.coords,state.userCoords));
         }
-        
-        const getPrompt = (query, lang) => {
-            const prompts = {
-                en: `Find ${query} restaurants near the user's location.`,
-                bn: `ব্যবহারকারীর অবস্থানের কাছাকাছি ${query} রেস্তোরাঁ খুঁজুন।`,
-                ar: `ابحث عن مطاعم ${query} بالقرب من موقع المستخدم.`,
-                hi: `उपयोगकर्ता के स्थान के पास ${query} रेस्तरां खोजें।`,
-                ja: `ユーザーの現在地周辺で${query}レストランを検索してください。`,
-                es: `Encuentra restaurantes de ${query} cerca de la ubicación del usuario.`,
-            };
-            return prompts[lang] || prompts.en;
-        };
+      }
 
-        const findRestaurants = async (query, location, language) => {
-            try {
-                const response = await ai.models.generateContent({
-                    model: "gemini-2.5-flash",
-                    contents: getPrompt(query, language),
-                    config: {
-                        tools: [{ googleMaps: {} }],
-                        toolConfig: {
-                            retrievalConfig: {
-                                latLng: {
-                                    latitude: location.latitude,
-                                    longitude: location.longitude
-                                }
-                            }
-                        },
-                        systemInstruction: `You are a helpful restaurant recommendation assistant. 
-                            Provide a numbered list of restaurants. For each restaurant, provide these three things on separate lines:
-                            1.  **Restaurant Name**
-                            Description: A brief, enticing, one-sentence description.
-                            ImagePrompt: A short, simple phrase for finding a stock photo, like "gourmet pizza slice" or "fresh sushi platter".
-                            
-                            Example:
-                            1.  **The Pizza Palace**
-                            Description: Serving a wide variety of authentic Italian pizzas with fresh, local ingredients.
-                            ImagePrompt: authentic italian pizza`,
-                    },
-                });
-                const text = response.text;
-                const restaurants = parseRestaurants(text);
-                const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-                return { restaurants, groundingChunks };
-            }
-            catch (error) {
-                console.error("Error finding restaurants:", error);
-                throw new Error("Failed to fetch restaurant data from Gemini API.");
-            }
-        };
-        // ============== END: services/geminiService.ts ==============
+      // render
+      resultsEl.innerHTML='';
+      if(list.length===0){resultsEmpty.style.display='block'; return;}
+      resultsEmpty.style.display='none';
 
+      list.forEach(item=>{
+        const card = document.createElement('div'); card.className='card panel';
+        const thumb = document.createElement('div'); thumb.className='thumb'; thumb.textContent=item.cuisine[0];
+        const meta = document.createElement('div'); meta.className='meta';
+        const h = document.createElement('h3'); h.textContent=item.name + ' '; const spanRate=document.createElement('span'); spanRate.className='rating'; spanRate.textContent='★ '+item.rating; spanRate.style.fontSize='0.9rem'; h.appendChild(spanRate);
+        const p = document.createElement('p'); p.className='muted'; p.textContent = item.cuisine + ' • ' + item.city;
+        meta.appendChild(h); meta.appendChild(p);
+        const actions = document.createElement('div'); actions.className='actions';
+        const details = document.createElement('button'); details.className='btn secondary'; details.textContent='Details'; details.addEventListener('click',()=>openModal(item));
+        const fav = document.createElement('button'); fav.className='btn'; fav.textContent = state.favorites.has(item.id)? 'Saved' : 'Save'; fav.addEventListener('click',()=>toggleFav(item,fav));
+        actions.appendChild(details); actions.appendChild(fav);
+        card.appendChild(thumb); card.appendChild(meta); card.appendChild(actions);
+        resultsEl.appendChild(card);
+      });
+    }
 
-        // ============== START: components/Advertisement.tsx ==============
-        const Advertisement = ({ translations }) => {
-            return (React.createElement("div", { className: "bg-gray-800 p-4 rounded-lg border border-dashed border-gray-600 shadow-lg text-center overflow-hidden" },
-                React.createElement("span", { className: "text-xs text-gray-500 mb-2 block" }, translations.advertisement),
-                React.createElement("div", { className: "bg-gray-700 h-full flex items-center justify-center rounded" },
-                    React.createElement("p", { className: "text-gray-400" }, "Your Ad Will Be Displayed Here"))));
-        };
-        // ============== END: components/Advertisement.tsx ==============
+    function openModal(item){
+      mdlTitle.textContent = item.name;
+      mdlDesc.textContent = item.desc;
+      mdlExtra.innerHTML = `<div class="row"><strong>Rating:</strong> <div style="margin-left:8px">${item.rating} / 5</div></div><div style="margin-top:8px"><strong>City:</strong> ${item.city}</div>`;
+      modalBackdrop.style.display='flex'; modalBackdrop.setAttribute('aria-hidden','false');
+      // center map on marker if map is visible
+      if(state.map){ state.map.setView(item.coords, 12, {animate:true}); }
+    }
 
+    closeModal.addEventListener('click',()=>{modalBackdrop.style.display='none'; modalBackdrop.setAttribute('aria-hidden','true');});
+    modalBackdrop.addEventListener('click', (e)=>{ if(e.target===modalBackdrop){ modalBackdrop.style.display='none'; modalBackdrop.setAttribute('aria-hidden','true'); } });
 
-        // ============== START: components/RestaurantCard.tsx ==============
-        const RestaurantCard = ({ restaurant, groundingChunk, translations }) => {
-            const mapLink = groundingChunk?.maps?.uri;
-            const imageUrl = restaurant.imagePrompt 
-                ? `https://source.unsplash.com/400x300/?${encodeURIComponent(restaurant.imagePrompt)}` 
-                : 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=400';
+    function toggleFav(item, btnEl){
+      if(state.favorites.has(item.id)){ state.favorites.delete(item.id); btnEl.textContent='Save'; }
+      else { state.favorites.add(item.id); btnEl.textContent='Saved'; }
+      localStorage.setItem('wf:favs', JSON.stringify(Array.from(state.favorites)));
+    }
 
-            return (React.createElement("div", { className: "bg-gray-800/70 rounded-lg border border-amber-500/20 shadow-lg transform hover:scale-105 transition-transform duration-300 overflow-hidden flex flex-col" },
-                React.createElement("img", { src: imageUrl, alt: `Image of ${restaurant.name}`, className: "card-image w-full" }),
-                React.createElement("div", { className: "p-4 flex flex-col flex-grow" },
-                    React.createElement("h3", { className: "text-xl font-bold text-amber-300 mb-2" }, restaurant.name),
-                    React.createElement("p", { className: "text-gray-300 mb-4 text-sm flex-grow" }, restaurant.description),
-                    mapLink && (React.createElement("a", { href: mapLink, target: "_blank", rel: "noopener noreferrer", className: "inline-flex items-center space-x-2 text-sm font-semibold text-amber-400 hover:text-amber-300 transition-colors mt-auto" },
-                        React.createElement(LocationMarkerIcon, { className: "h-5 w-5" }),
-                        React.createElement("span", null, translations.viewOnMap))))));
-        };
-        // ============== END: components/RestaurantCard.tsx ==============
+    favoritesBtn.addEventListener('click', ()=>{
+      // show only favorites
+      state.query=''; searchInput.value='';
+      const favIds = Array.from(state.favorites);
+      if(favIds.length===0){ alert('No favorites yet. Save places from results.'); return; }
+      const favList = DATA.filter(d=>favIds.includes(d.id));
+      resultsEl.innerHTML='';
+      favList.forEach(item=>{
+        const card = document.createElement('div'); card.className='card panel';
+        const thumb = document.createElement('div'); thumb.className='thumb'; thumb.textContent=item.cuisine[0];
+        const meta = document.createElement('div'); meta.className='meta';
+        const h = document.createElement('h3'); h.textContent=item.name + ' '; const spanRate=document.createElement('span'); spanRate.className='rating'; spanRate.textContent='★ '+item.rating; h.appendChild(spanRate);
+        const p = document.createElement('p'); p.className='muted'; p.textContent = item.cuisine + ' • ' + item.city;
+        meta.appendChild(h); meta.appendChild(p);
+        const actions = document.createElement('div'); actions.className='actions';
+        const details = document.createElement('button'); details.className='btn secondary'; details.textContent='Details'; details.addEventListener('click',()=>openModal(item));
+        const fav = document.createElement('button'); fav.className='btn'; fav.textContent = 'Remove'; fav.addEventListener('click',()=>{ state.favorites.delete(item.id); localStorage.setItem('wf:favs', JSON.stringify(Array.from(state.favorites))); render(); });
+        actions.appendChild(details); actions.appendChild(fav);
+        card.appendChild(thumb); card.appendChild(meta); card.appendChild(actions);
+        resultsEl.appendChild(card);
+      });
+    });
 
+    searchBtn.addEventListener('click', ()=>{ state.query = searchInput.value; render(); });
+    searchInput.addEventListener('keydown', (e)=>{ if(e.key==='Enter'){ state.query = searchInput.value; render(); } });
+    sortSelect.addEventListener('change', ()=>{ state.sort = sortSelect.value; render(); });
+    toggleMapBtn.addEventListener('click', ()=>{ state.showMap = !state.showMap; mapPanel.style.display = state.showMap? 'block' : 'none'; toggleMapBtn.textContent = state.showMap? 'Hide map':'Show map'; if(state.showMap && state.map) state.map.invalidateSize(); });
 
-        // ============== START: components/AdminPanel.tsx ==============
-        const AdminPanel = ({ isOpen, onClose, onLogoChange, translations }) => {
-            const fileInputRef = useRef(null);
-            const handleFileChange = (event) => {
-                const file = event.target.files?.[0];
-                if (file) {
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        if (e.target?.result) {
-                            onLogoChange(e.target.result);
-                            onClose();
-                        }
-                    };
-                    reader.readAsDataURL(file);
-                }
-            };
-            const handleUploadClick = () => {
-                fileInputRef.current?.click();
-            };
-            if (!isOpen)
-                return null;
-            return (React.createElement("div", { className: "fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4", onClick: onClose },
-                React.createElement("div", { className: "bg-gray-800 rounded-lg shadow-xl w-full max-w-md border border-gray-700", onClick: e => e.stopPropagation() },
-                    React.createElement("div", { className: "flex justify-between items-center p-4 border-b border-gray-700" },
-                        React.createElement("h2", { className: "text-xl font-bold text-amber-300" }, translations.adminPanel),
-                        React.createElement("button", { onClick: onClose, className: "text-gray-400 hover:text-white" },
-                            React.createElement(XIcon, { className: "h-6 w-6" }))),
-                    React.createElement("div", { className: "p-6" },
-                        React.createElement("p", { className: "text-gray-300 mb-4" }, translations.uploadLogo),
-                        React.createElement("button", { onClick: handleUploadClick, className: "w-full flex justify-center items-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-4 rounded-lg transition-colors" },
-                            React.createElement(UploadIcon, { className: "h-6 w-6" }),
-                            React.createElement("span", null, translations.uploadLogo)),
-                        React.createElement("input", { type: "file", ref: fileInputRef, onChange: handleFileChange, accept: "image/*", className: "hidden" })))));
-        };
-        // ============== END: components/AdminPanel.tsx ==============
+    function initMap(){
+      try{
+        state.map = L.map('map').setView([20,0], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19, attribution:'© OpenStreetMap'}).addTo(state.map);
+        drawMarkers(DATA);
+      }catch(e){ console.warn('map init failed',e); document.getElementById('map').innerHTML='Map failed to load.'; }
+    }
 
+    function drawMarkers(list){
+      // clear
+      state.markers.forEach(m=>state.map.removeLayer(m)); state.markers=[];
+      list.forEach(item=>{
+        const m = L.marker(item.coords).addTo(state.map).bindPopup(`<strong>${item.name}</strong><br>${item.cuisine} • ${item.city}`);
+        state.markers.push(m);
+      });
+    }
 
-        // ============== START: components/Header.tsx ==============
-        const Header = ({ logoUrl, currentLanguage, onLanguageChange, onAdminClick, translations }) => {
-            const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
-            return (React.createElement("header", { className: "bg-gray-800/50 backdrop-blur-sm p-4 sticky top-0 z-10 border-b border-gray-700/50" },
-                React.createElement("div", { className: "container mx-auto flex justify-between items-center" },
-                    React.createElement("div", { className: "flex items-center space-x-3" },
-                        React.createElement("img", { src: logoUrl, alt: "Logo", className: "h-10 w-10 rounded-full object-cover bg-amber-500" }),
-                        React.createElement("div", null,
-                            React.createElement("h1", { className: "text-2xl font-display text-amber-400" }, translations.appTitle),
-                            React.createElement("p", { className: "text-sm text-amber-200 hidden md:block" }, translations.appSubtitle))),
-                    React.createElement("div", { className: "flex items-center space-x-4" },
-                        React.createElement("div", { className: "relative" },
-                            React.createElement("button", { onClick: () => setIsLangDropdownOpen(!isLangDropdownOpen), className: "flex items-center space-x-2 text-gray-300 hover:text-white transition-colors" },
-                                React.createElement(GlobeIcon, { className: "h-6 w-6" }),
-                                React.createElement("span", { className: "hidden sm:inline" }, LANGUAGES.find(l => l.code === currentLanguage)?.name.split(' ')[0])),
-                            isLangDropdownOpen && (React.createElement("div", { className: "absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-20 border border-gray-700" }, LANGUAGES.map((lang) => (React.createElement("button", { key: lang.code, onClick: () => {
-                                    onLanguageChange(lang.code);
-                                    setIsLangDropdownOpen(false);
-                                }, className: `block w-full text-left px-4 py-2 text-sm ${currentLanguage === lang.code ? 'bg-amber-500 text-white' : 'text-gray-300 hover:bg-gray-700'}` }, lang.name)))))),
-                        React.createElement("button", { onClick: onAdminClick, className: "text-gray-300 hover:text-white transition-colors" },
-                            React.createElement(CogIcon, { className: "h-6 w-6" }))))));
-        };
-        // ============== END: components/Header.tsx ==============
+    function renderMapFromResults(){
+      // redraw markers for displayed results (basic sync)
+      const nodes = Array.from(resultsEl.children);
+      // find IDs from titles
+      const visibleNames = nodes.map(n=>n.querySelector('h3').childNodes[0].textContent.trim());
+      const visible = DATA.filter(d=>visibleNames.includes(d.name));
+      if(state.map) drawMarkers(visible);
+      if(visible.length>0 && state.map){ state.map.fitBounds(visible.map(i=>i.coords),{padding:[40,40]}); }
+    }
 
+    function render(){
+      renderFilters();
+      renderResults();
+      renderMapFromResults();
+    }
 
-        // ============== START: App.tsx ==============
-        const App = () => {
-            const [restaurants, setRestaurants] = useState([]);
-            const [groundingChunks, setGroundingChunks] = useState([]);
-            const [location, setLocation] = useState(null);
-            const [isLoading, setIsLoading] = useState(false);
-            const [error, setError] = useState(null);
-            const [searchQuery, setSearchQuery] = useState('');
-            const [locationStatus, setLocationStatus] = useState('');
-            const [language, setLanguage] = useState(LanguageCode.BN); // Default to Bengali
-            const [logoUrl, setLogoUrl] = useState(localStorage.getItem('appLogoUrl') || 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxMDAgMTAwIj48cGF0aCBmaWxsPSIjZjU5ZTBiIiBkPSJNNTAsMEMyMi4zOSwwLDAsMjIuMzksMCw1MGMwLDI3LjYxLDIyLjM5LDUwLDUwLDUwczUwLTIyLjM5LDUwLTUwQzEwMCwyMi4zOSw3Ny42MSwwLDUwLDB6IE01MCw5MC45MWMtMjIuNjIsMC00MC45MS0xOC4yOS00MC45MS00MC45MVMxNy4zOCw5LjA5LDUwLDkuMDlTOTEuOTEsMjcuMzgsOTEuOTEsNTBTNzIuNjIsOTAuOTIsNTAsOTAuOTJ6Ii8+PHBhdGggZmlsbD0iI2Y1OTMwYiIgZD0iTTUwLDkuMDlDMTcuMzgsOS4wOSw5LjA5LDE3LjM4LDkuMDksNDAuOVY1MGg4MS44MnYtOS4xQzkwLjkxLDI3LjM4LDcyLjYyLDkuMDksNTAsOS4wOXoiLz48cGF0aCBmaWxsPSIjZjU5ZTBiIiBkPSJNNTAsNTBjMCwyMi42Mi0xOC4yOSw0MC45MS00MC45MSw0MC45MXYwSDUwVjUweiIvPjxwYXRoIGZpbGw9IiNmNzk2MWUiIGQ9Ik02My42NCwzMS44MmMtMS44Mi0yLjcyLTMuNjQtMy42NC01LjQ1LTMuNjRjLTEuODIsMC0zLjY0LDAuOTEtMy4xNCwyLjcyYzAsMS44MiwwLjksMy42NCwyLjcyLDcuMjhsMi43MiwyLjcyYzEuODIsMy42NCwyLjcyLDcuMjgsMCwxMC45MWMtMi43MiwzLjY0LTcuMjgsMy42NC0xMC45MSwwYy0yLjcyLTEuODItMy42NC0zLjY0LTMuNjQtNS44NWMwLTEuODIsMC45MS0zLjY0LDIuNzItMy42NGMxLjgyLDAsMS44MiwwLjksMS44MiwxLjgyYzAsMC45MS0wLjksMS44Mi0wLjksMS44MmwwLjksMC45MWMyLjcyLDEuODIsNS40NSwxLjgyLDcuMjgsMGMxLjgyLTEuODIsMC01LjQ1LTAuOTEtNy4yOEw0OC4xOCw0MC45Yy0yLjcyLTMuNjQtMy42NC03LjI4LTAuOTEtMTAuOTFjMi43Mi0zLjY0LDcuMjgtMy42NCwxMC45MSwwQzYwLjksMzEuODIsNjEuODIsMzEuODIsNjMuNjQsMzEuODJ6Ii8+PC9zdmc+');
-            const [isAdminPanelOpen, setIsAdminPanelOpen] = useState(false);
-            
-            useEffect(() => {
-                document.documentElement.lang = language;
-                document.documentElement.dir = language === LanguageCode.AR ? 'rtl' : 'ltr';
-            }, [language]);
+    // Try to get user location to improve sorting by distance (optional)
+    if(navigator.geolocation){
+      navigator.geolocation.getCurrentPosition(pos=>{
+        state.userCoords = [pos.coords.latitude,pos.coords.longitude];
+      }, err=>{ /* ignore */ }, {timeout:5000});
+    }
 
-            const translations = TRANSLATIONS[language];
-            
-            const getLocation = useCallback(() => {
-                setLocationStatus(translations.findingLocation);
-                setError(null);
-                navigator.geolocation.getCurrentPosition((position) => {
-                    setLocation({
-                        latitude: position.coords.latitude,
-                        longitude: position.coords.longitude,
-                    });
-                    setLocationStatus('');
-                }, () => {
-                    setError(translations.locationError);
-                    setLocationStatus('');
-                });
-            }, [translations]);
-            
-            useEffect(() => {
-                getLocation();
-            }, [getLocation]);
+    // init
+    render();
+    initMap();
 
-            const handleLogoChange = (newLogoUrl) => {
-                setLogoUrl(newLogoUrl);
-                localStorage.setItem('appLogoUrl', newLogoUrl);
-            };
-            
-            const handleSearch = async () => {
-                if (!searchQuery.trim())
-                    return;
-                if (!location) {
-                    setError(translations.locationError);
-                    return;
-                }
-                setIsLoading(true);
-                setError(null);
-                setRestaurants([]);
-                setGroundingChunks([]);
-                try {
-                    const result = await findRestaurants(searchQuery, location, language);
-                    setRestaurants(result.restaurants);
-                    setGroundingChunks(result.groundingChunks);
-                }
-                catch (err) {
-                    setError(err instanceof Error ? err.message : 'An unknown error occurred.');
-                }
-                finally {
-                    setIsLoading(false);
-                }
-            };
-            
-            const handleKeyPress = (event) => {
-                if (event.key === 'Enter') {
-                    handleSearch();
-                }
-            };
-            
-            const handleLanguageChange = (langCode) => {
-                setLanguage(langCode);
-            };
-            
-            const findChunkForRestaurant = (restaurantName) => {
-                if (!restaurantName) return undefined;
-                return groundingChunks.find(chunk => chunk.maps?.title && chunk.maps.title.toLowerCase().includes(restaurantName.toLowerCase()));
-            };
-            
-            const renderContent = () => {
-                const content = restaurants.map((restaurant, index) => (
-                    React.createElement(RestaurantCard, { 
-                        key: `${restaurant.name}-${index}`, 
-                        restaurant: restaurant, 
-                        groundingChunk: findChunkForRestaurant(restaurant.name), 
-                        translations: translations 
-                    })
-                ));
-                
-                if (content.length > 3) {
-                    content.splice(3, 0, React.createElement(Advertisement, { key: "ad-1", translations: translations }));
-                }
-                return content;
-            };
-            
-            return (React.createElement("div", { className: "min-h-screen bg-gray-900 bg-gradient-to-br from-gray-900 to-gray-800" },
-                React.createElement(Header, { logoUrl: logoUrl, currentLanguage: language, onLanguageChange: handleLanguageChange, onAdminClick: () => setIsAdminPanelOpen(true), translations: translations }),
-                React.createElement(AdminPanel, { isOpen: isAdminPanelOpen, onClose: () => setIsAdminPanelOpen(false), onLogoChange: handleLogoChange, translations: translations }),
-                React.createElement("main", { className: "container mx-auto px-4 py-8" },
-                    React.createElement("div", { className: "max-w-3xl mx-auto mb-8" },
-                        React.createElement("div", { className: "relative mb-2" },
-                            React.createElement("input", { type: "text", value: searchQuery, onChange: (e) => setSearchQuery(e.target.value), onKeyPress: handleKeyPress, placeholder: translations.searchPlaceholder, className: "w-full bg-gray-800 border-2 border-gray-700 focus:border-amber-500 focus:ring-amber-500 rounded-full py-3 pr-28 pl-6 text-lg text-white placeholder-gray-500 transition-colors" }),
-                            React.createElement("button", { onClick: handleSearch, disabled: isLoading, className: "absolute right-2 top-1/2 -translate-y-1/2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-full px-6 py-2 flex items-center space-x-2 transition-colors disabled:bg-gray-600" },
-                                React.createElement(SearchIcon, { className: "h-5 w-5" }),
-                                React.createElement("span", null, translations.searchButton))),
-                        React.createElement("div", { className: "flex justify-center items-center h-6 text-sm" },
-                            locationStatus && React.createElement("p", { className: "text-amber-300" }, locationStatus),
-                            !location && !locationStatus && (React.createElement("button", { onClick: getLocation, className: "flex items-center space-x-2 text-gray-400 hover:text-white" },
-                                React.createElement(LocationMarkerIcon, { className: "h-5 w-5" }),
-                                React.createElement("span", null, translations.useMyLocation))),
-                            error && React.createElement("p", { className: "text-red-400" }, error))),
-                    isLoading && (React.createElement("div", { className: "text-center py-10" },
-                        React.createElement("div", { className: "loader ease-linear rounded-full border-4 border-t-4 border-gray-700 h-12 w-12 mx-auto mb-4" }),
-                        React.createElement("p", { className: "text-lg text-amber-300" }, translations.searching))),
-                    !isLoading && restaurants.length === 0 && (React.createElement("div", { className: "text-center py-20 px-6 bg-gray-800/50 rounded-lg" },
-                        React.createElement("h2", { className: "text-2xl font-bold text-amber-300 mb-2" }, error ? translations.noResults : translations.appTitle),
-                        React.createElement("p", { className: "text-gray-300 max-w-xl mx-auto" }, error || translations.initialPrompt))),
-                    
-                    !isLoading && restaurants.length > 0 && (React.createElement("div", { className: "grid md:grid-cols-2 lg:grid-cols-3 gap-6" }, renderContent())),
-                    
-                    !isLoading && restaurants.length === 0 && !error && searchQuery && (
-                        React.createElement("div", { className: "text-center py-20 px-6 bg-gray-800/50 rounded-lg" },
-                           React.createElement("h2", { className: "text-2xl font-bold text-amber-300 mb-2" }, translations.noResults),
-                           React.createElement("p", { className: "text-gray-300 max-w-xl mx-auto" }, "Try a different search term.")
-                        )
-                    )
-                )
-            ));
-        };
-        // ============== END: App.tsx ==============
+    // when results change we update markers
+    const obs = new MutationObserver(()=>{ if(state.map) renderMapFromResults(); });
+    obs.observe(resultsEl,{childList:true,subtree:false});
 
-
-        // ============== START: index.tsx ==============
-        const rootElement = document.getElementById('root');
-        if (!rootElement) {
-            throw new Error("Could not find root element to mount to");
-        }
-        const root = ReactDOM.createRoot(rootElement);
-        root.render(
-            React.createElement(React.StrictMode, null,
-                React.createElement(App, null)
-            )
-        );
-        // ============== END: index.tsx ==============
-    </script>
+    // Accessibility: keyboard shortcut "/" to focus search
+    window.addEventListener('keydown',(e)=>{ if(e.key==='/' && document.activeElement!==searchInput){ e.preventDefault(); searchInput.focus(); } });
+  </script>
 </body>
 </html>
