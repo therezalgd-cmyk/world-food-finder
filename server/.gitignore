@@ -1,0 +1,6 @@
+# Local env and keys
+.env
+serviceAccountKey.json
+node_modules/
+uploads/
+*.log
