@@ -27,7 +27,8 @@ require('./config/db');
 app.use('/api', require('./routes'));
 
 // Auth routes
-app.use('/api/auth', require('./routes/authGoogle'));
+   app.use('/api/auth', require('./routes/authGoogle'));
+   app.use('/auth', require('./routes/authGoogle'));
 // Root route
 app.get('/', (req, res) => {
   res.json({
